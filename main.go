@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 
@@ -23,26 +22,34 @@ type Result struct {
 }
 
 type Config struct {
-	MainDiv string `json:"main_div"`
+	MainElem     string `json:"main_elem"`
+	CauraselElem string `json:"caurasel_elem"`
 
-	OrganicDiv  string `json:"organic_div"`
-	CauraselDiv string `json:"caurasel_div"`
+	OrganicElem  string `json:"organic_elem"`
+	OrganicLink  string `json:"organic_link"`
+	OrganicTitle string `json:"organic_title"`
 
-	PhotoCaurasel string `json:"photo_caurasel"`
+	PhotoImg string `json:"photo_img"`
 
-	FindCaurasel string `json:"find_caurasel"`
-	FindTitle    string `json:"find_title"`
+	FindElem  string `json:"find_elem"`
+	FindLink  string `json:"find_link"`
+	FindTitle string `json:"find_title"`
 
-	RecipeCaurasel string `json:"recipe_caurasel"`
-	RecipeTitle    string `json:"recipe_title"`
+	RecipeElem  string `json:"recipe_elem"`
+	RecipeLink  string `json:"recipe_link"`
+	RecipeTitle string `json:"recipe_title"`
 
-	VideoCaurasel string `json:"video_caurasel"`
-	VideoTitle    string `json:"video_title"`
+	VideoElem  string `json:"video_elem"`
+	VideoLink  string `json:"video_link"`
+	VideoTitle string `json:"video_title"`
 
-	LocalLinks string `json:"local_links"`
+	LocalElem  string `json:"local_elem"`
+	LocalLink  string `json:"local_link"`
 	LocalTitle string `json:"local_title"`
 
-	PanelLinks string `json:"panel_links"`
+	PanelElem  string `json:"panel_elem"`
+	PanelLink  string `json:"panel_link"`
+	PanelTitle string `json:"panel_title"`
 }
 
 func loadConfig(path string) (*Config, error) {
@@ -104,140 +111,108 @@ func main() {
 	}
 }
 
-func parseDoc(doc *goquery.Document, config *Config) *Result {
+func extract(ls, ts string, elem *goquery.Selection, t RankType) (*Link, bool) {
+	url, exist := elem.Find(ls).AddSelection(elem).First().Attr("href")
+	title := elem.Find(ts).AddSelection(elem).First().Text()
+
+	return &Link{
+		Title: title,
+		Url:   url,
+		Type:  t,
+	}, exist
+}
+
+func isValid(link *Link) bool {
+	return len(link.Url) > 1 && len(link.Title) != 0
+}
+
+func parseDoc(doc *goquery.Document, c *Config) *Result {
 
 	res := Result{}
-	parent := doc.Find(config.MainDiv).First()
+	parent := doc.Find(c.MainElem).First()
 
 	// Organic.
-	parent.Find(config.OrganicDiv).Each(func(index int, elem *goquery.Selection) {
-		url, exist := elem.Find("a").First().Attr("href")
-		title := elem.Find("h3").First().Text()
+	parent.Find(c.OrganicElem).Each(func(index int, elem *goquery.Selection) {
+		link, _ := extract(c.OrganicLink, c.OrganicTitle, elem, Organic)
 
-		if !exist {
-			fmt.Println("Error parsing organic links.")
-		}
-
-		res.Organic = append(res.Organic, Link{
-			Title: title,
-			Url:   url,
-			Type:  Organic,
-		})
-	})
-
-	// Caurasel.
-	parent.Find(config.CauraselDiv).Each(func(index int, elem *goquery.Selection) {
-
-		local := false
-		links := []Link{}
-
-		// Photo Caurasel.
-		elem.Find(config.PhotoCaurasel).Each(func(index int, elem *goquery.Selection) {
-			src, _ := elem.Attr("data-src")
-			title, _ := elem.Attr("alt")
-
-			if len(title) != 0 && len(src) != 0 {
-				links = append(links, Link{
-					Title: title,
-					Url:   src,
-					Type:  Carousel,
-				})
-			}
-		})
-
-		// 'Find results on' Caurasel.
-		elem.Find(config.FindCaurasel).Each(func(index int, elem *goquery.Selection) {
-			url, exist := elem.Attr("href")
-			title := elem.Find(config.FindTitle).First().Text()
-
-			if !exist {
-				fmt.Println("Error parsing 'Find results on' caurasel links.")
-			}
-
-			if len(title) != 0 && len(url) != 0 {
-				links = append(links, Link{
-					Title: title,
-					Url:   url,
-					Type:  Carousel,
-				})
-			}
-		})
-
-		// Recipe Caurasel.
-		elem.Find(config.RecipeCaurasel).Each(func(index int, elem *goquery.Selection) {
-			url, exist := elem.Attr("href")
-			title := elem.Find(config.RecipeTitle).First().Text()
-
-			if !exist {
-				fmt.Println("Error parsing 'Recipes' caurasel links.")
-			}
-
-			if len(title) != 0 && len(url) != 0 {
-				links = append(links, Link{
-					Title: title,
-					Url:   url,
-					Type:  Carousel,
-				})
-			}
-		})
-
-		// Video Caurasel.
-		elem.Find(config.VideoCaurasel).Each(func(index int, elem *goquery.Selection) {
-			url, exist := elem.Attr("href")
-			title := elem.Find(config.VideoTitle).First().Text()
-
-			if !exist {
-				fmt.Println("Error parsing 'Videos' caurasel links.")
-			}
-
-			links = append(links, Link{
-				Title: title,
-				Url:   url,
-				Type:  Carousel,
-			})
-		})
-
-		// Local.
-		elem.Find(config.LocalLinks).Each(func(index int, elem *goquery.Selection) {
-			title := elem.Find(config.LocalTitle).First().Text()
-			local = true
-
-			links = append(links, Link{
-				Title: title,
-				Url:   "",
-				Type:  Local,
-			})
-		})
-
-		if local {
-			res.Local = links
-		} else {
-			res.Caurasel = append(res.Caurasel, links)
+		if isValid(link) {
+			res.Organic = append(res.Organic, *link)
 		}
 	})
 
 	// Knowledge Panel.
-	panelLinks := parent.Find(config.PanelLinks)
-	panelLinks = panelLinks.FilterFunction(func(i int, link *goquery.Selection) bool {
+	parent.Find(c.PanelElem).Each(func(index int, elem *goquery.Selection) {
+		link, _ := extract(c.PanelLink, c.PanelTitle, elem, Panel)
 
-		// Filter out empty links.
-		url, exist := link.Attr("href")
-		return exist && len(url) > 1
+		if isValid(link) {
+			res.Panel = append(res.Panel, *link)
+		}
 	})
 
-	panelLinks.Each(func(index int, elem *goquery.Selection) {
-		link, exist := elem.Attr("href")
-		title := elem.Text()
+	// Caurasel.
+	parent.Find(c.CauraselElem).Each(func(index int, elem *goquery.Selection) {
 
-		if !exist {
-			fmt.Println("Error parsing knowledge panel links.")
-		}
+		isLocal := false
+		links := []Link{}
 
-		res.Panel = append(res.Panel, Link{
-			Title: title,
-			Url:   link,
-			Type:  Panel,
+		// Photo Caurasel.
+		elem.Find(c.PhotoImg).Each(func(index int, elem *goquery.Selection) {
+			url, _ := elem.Attr("data-src")
+			title, _ := elem.Attr("alt")
+
+			link := &Link{
+				Title: title,
+				Url:   url,
+				Type:  Carousel,
+			}
+
+			if isValid(link) {
+				links = append(links, *link)
+			}
 		})
+
+		// 'Find results on' Caurasel.
+		elem.Find(c.FindElem).Each(func(index int, elem *goquery.Selection) {
+			link, _ := extract(c.FindLink, c.FindTitle, elem, Carousel)
+
+			if isValid(link) {
+				links = append(links, *link)
+			}
+		})
+
+		// Recipe Caurasel.
+		elem.Find(c.RecipeElem).Each(func(index int, elem *goquery.Selection) {
+			link, _ := extract(c.RecipeLink, c.RecipeTitle, elem, Carousel)
+
+			if isValid(link) {
+				links = append(links, *link)
+			}
+		})
+
+		// Video Caurasel.
+		elem.Find(c.VideoElem).Each(func(index int, elem *goquery.Selection) {
+			link, _ := extract(c.VideoLink, c.VideoTitle, elem, Carousel)
+
+			if isValid(link) {
+				links = append(links, *link)
+			}
+		})
+
+		// Local.
+		elem.Find(c.LocalElem).Each(func(index int, elem *goquery.Selection) {
+			link, _ := extract(c.LocalLink, c.LocalTitle, elem, Local)
+			isLocal = true
+
+			if len(link.Title) != 0 {
+				links = append(links, *link)
+			}
+		})
+
+		if isLocal {
+			res.Local = links
+		} else {
+			res.Caurasel = append(res.Caurasel, links)
+		}
 	})
 
 	return &res
