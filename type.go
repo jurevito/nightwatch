@@ -12,8 +12,8 @@ const (
 	Snippet
 )
 
-func (s RankType) String() string {
-	switch s {
+func (t RankType) String() string {
+	switch t {
 	case Organic:
 		return "organic"
 	case Local:
@@ -28,21 +28,21 @@ func (s RankType) String() string {
 	return "unknown"
 }
 
-func (s RankType) MarshalJSON() ([]byte, error) {
-	var rType string
+func (t RankType) MarshalJSON() ([]byte, error) {
+	var s string
 
-	switch s {
+	switch t {
 	case Organic:
-		rType = "organic"
+		s = "organic"
 	case Local:
-		rType = "local"
+		s = "local"
 	case Carousel:
-		rType = "carousel"
+		s = "carousel"
 	case Panel:
-		rType = "knowledge_panel"
+		s = "knowledge_panel"
 	case Snippet:
-		rType = "featured_snippet"
+		s = "featured_snippet"
 	}
 
-	return json.Marshal(rType)
+	return json.Marshal(s)
 }
