@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"os"
 	"testing"
@@ -11,32 +10,29 @@ import (
 
 func BenchmarkParse(b *testing.B) {
 
-	// Read CSS selector configuration.
-	data, err := os.ReadFile("config.json")
+	c, err := loadConfig("config.json")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Could not read configuration file: ", err)
 	}
 
-	var config Config
-
-	if err := json.Unmarshal(data, &config); err != nil {
-		log.Fatal(err)
-	}
-
-	// Read HTML file.
-	file, err := os.Open("pizza.html")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		doc, err := goquery.NewDocumentFromReader(file)
+
+		b.StopTimer()
+
+		f, err := os.Open("pizza.html")
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		b.ResetTimer()
-		_ = parseDoc(doc, &config)
+		doc, err := goquery.NewDocumentFromReader(f)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		b.StartTimer()
+		_ = parseDoc(doc, c)
+
+		f.Close()
 	}
 }
