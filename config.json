@@ -1,0 +1,20 @@
+{
+    "main_div": "div.GyAeWb",
+
+    "organic_div": "div.v7W49e > div.MjjYud,.hlcw0c div.yuRUbf",
+    "caurasel_div": "div.v7W49e > div.ULSxyf",
+
+    "photo_caurasel": "div.EDblX img",
+    "find_caurasel": "a[class=\"t2Yvdb\"]",
+    "find_title": "div.NNFu9b",
+    "recipe_caurasel": "div.qLyARd a.a-no-hover-decoration",
+    "recipe_title": "div[class=\"hfac6d LviCwe tNxQIb ynAwRc\"]",
+
+    "video_caurasel": "a[class=\"X5OiLe\"]",
+    "video_title": "span.cHaqb",
+
+    "local_links": "div.zIGF1d a.vwVdIc",
+    "local_title": "span.OSrXXb",
+
+    "panel_links": "div.I6TXqe a"
+}
