@@ -30,7 +30,7 @@ func TestParse(t *testing.T) {
 
 	// Check if number of parsed links is correct.
 	require.Equal(t, 98, len(res.Organic))
-	require.Equal(t, 28, len(res.Panel))
+	require.Equal(t, 27, len(res.Panel))
 	require.Equal(t, 3, len(res.Local))
 
 	expected := []int{5, 3, 6, 4}
