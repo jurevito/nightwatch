@@ -45,53 +45,66 @@ type Config struct {
 	PanelLinks string `json:"panel_links"`
 }
 
+func loadConfig(path string) (*Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var c Config
+
+	if err := json.Unmarshal(data, &c); err != nil {
+		return nil, err
+	}
+
+	return &c, nil
+}
+
+func saveJSON(path string, res *Result) error {
+	data, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err = f.Write(data); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func main() {
 
-	// Read CSS selector configuration.
-	data, err := os.ReadFile("config.json")
+	c, err := loadConfig("config.json")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Could not read configuration file: ", err)
 	}
 
-	var config Config
+	f, err := os.Open("pizza.html")
+	if err != nil {
+		log.Fatal("Could not read HTML file: ", err)
+	}
+	defer f.Close()
 
-	if err := json.Unmarshal(data, &config); err != nil {
-		log.Fatal(err)
+	doc, err := goquery.NewDocumentFromReader(f)
+	if err != nil {
+		log.Fatal("File cannot be parsed as HTML: ", err)
 	}
 
-	// Read HTML file.
-	file, err := os.Open("pizza.html")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
+	res := parseDoc(doc, c)
 
-	doc, err := goquery.NewDocumentFromReader(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	res := parseDoc(doc, &config)
-
-	// Save Result struct into JSON file.
-	data, err = json.Marshal(res)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	output, err := os.Create("output.json")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer output.Close()
-
-	_, err = output.Write(data)
-	if err != nil {
-		log.Fatal(err)
+	if err := saveJSON("output.json", res); err != nil {
+		log.Fatal("Could not save results into JSON file: ", err)
 	}
 }
 
-func parseDoc(doc *goquery.Document, config *Config) Result {
+func parseDoc(doc *goquery.Document, config *Config) *Result {
 
 	res := Result{}
 	parent := doc.Find(config.MainDiv).First()
@@ -227,5 +240,5 @@ func parseDoc(doc *goquery.Document, config *Config) Result {
 		})
 	})
 
-	return res
+	return &res
 }
